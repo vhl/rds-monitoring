@@ -1,0 +1,19 @@
+# export AWS_PROFILE=default
+# export AWS_DEFAULT_REGION=us-east-1
+
+export FILTER_LOGS_REGEX="(IP address.*could not be resolved)"
+export FILTER_EVENTS_LIST="" # comma-separated list
+
+export NOTIFICATION_TOPIC_NAME="" # ex: ops-notifications
+
+export SLACK_WEBHOOK_URL="" # ex: https://hooks.slack.com/services/ABCDEF/ABCDEF/ABCDEFGHIJKLMNO
+export SLACK_CHANNEL="" # ex: #ops
+
+export LOG_MONITORING_INTERVAL_MINS=10
+        
+export BUCKET=rds-monitoring
+export RELEASE=$(date +%Y-%m-%d-%H%M)
+
+export EVENT_TOPIC_NAME=rds-monitoring
+
+export STACK_NAME=rds-monitoring

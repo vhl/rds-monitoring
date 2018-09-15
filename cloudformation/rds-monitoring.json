@@ -1,0 +1,202 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "RDS monitoring stack",
+    "Parameters": {
+        "FilterEventsList": {
+            "Description": "A comma-separated list of events that should be ignored",
+            "Type": "String"
+        },
+        "FilterLogsRegex": {
+            "Description": "A regex expressing logs that should be ignored",
+            "Type": "String"
+        }, 
+        "LogMonitoringInterval": {
+            "Description": "How often the RDS logs are processed",
+            "Type": "String"
+        },
+        "NotificationTopicName": {
+            "Description": "The SNS topic name used to send notifications",
+            "Type": "String"
+        },
+        "SlackWebhookUrl": {
+            "Description": "The Slack webhook URL used to post notifications to Slack",
+            "Type": "String"
+        },
+        "SlackChannel": {
+            "Description": "The Slack channel notifications are posted to",
+            "Type": "String"
+        },
+        "EventTopicName": {
+            "Description": "The SNS topic RDS events are delivered to",
+            "Type": "String"
+        },
+        "Release": {
+            "Description": "The release/version of rds-log-alerting",
+            "Type": "String"
+        },
+        "ArtifactBucket": {
+            "Description": "S3 bucket to locate lambda function",
+            "Type": "String"
+        }
+    },
+    "Conditions": {
+        "CreateNotificationTopic": {
+            "Fn::Not": [
+                "Fn::Equals": [{ "Ref": "NotificationTopicName" }, ""]
+            ]
+        }
+    },
+    "Resources": {
+        "IamRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [ "lambda.amazonaws.com" ]
+                            },
+                            "Action": [ "sts:AssumeRole" ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "RDSMonitoring",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "arn:aws:logs:*:*:*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "rds:DescribeDBInstances",
+                                        "rds:DescribeDBLogFiles",
+                                        "rds:DownloadCompleteDBLogFile",
+                                        "rds:DownloadDBLogFilePortion"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "sns:GetTopic",
+                                        "sns:GetTopicAttributes",
+                                        "sns:Publish"
+                                    ],
+                                    "Resource": { "Fn::Sub": "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${NotificationTopicName}" }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "NotificationTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Condition": "CreateNotificationTopic",
+            "Properties": {
+                "TopicName": { "Ref": "NotificationTopicName" }
+            }
+        },
+        "EventTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "TopicName": { "Ref": "EventTopicName" },
+                "Subscription": [
+                    {
+                        "Endpoint": { "Fn::GetAtt": [ "Function", "Arn" ] },
+                        "Protocol": "lambda"
+                    }
+                ]
+            }
+        },
+        "Function": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Description" : "Lambda function to monitor RDS logs",
+                "Handler": "index.handler",
+                "Role": {
+                    "Fn::GetAtt": [ "IamRole", "Arn" ]
+                },
+                "Code": {
+                    "S3Bucket": { "Ref": "ArtifactBucket" },
+                    "S3Key": {"Fn::Join": ["/", [{ "Ref": "Release" }, "rds-monitoring.zip"]]}
+                },
+                "Runtime": "nodejs6.10",
+                "Timeout": "120",
+                "Environment": {
+                    "Variables": {
+                        "DEBUG": "false",
+                        "SLACK_WEBHOOK_URL": { "Ref": "SlackWebhookUrl" },
+                        "SLACK_CHANNEL": { "Ref": "SlackChannel" },
+                        "NOTIFICATION_TOPIC": { "Fn::If": ["CreateNotificationTopic", { "Ref": "NotificationTopic" }, ""]},
+                        "LOG_MONITORING_INTERVAL": { "Ref": "LogMonitoringInterval" },
+                        "FILTER_LOGS_REGEX": { "Ref": "FilterLogsRegex" },
+                        "FILTER_EVENTS_LIST": { "Ref": "FilterEventsList" }
+                    }
+                }
+            }
+        },
+        "ScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "Trigger the RDS monitoring fxn on this interval",
+                "ScheduleExpression": { "Fn::Sub": "rate(${LogMonitoringInterval} minutes)" },
+                "State": "ENABLED",
+                "Targets": [{
+                    "Arn": { "Fn::GetAtt": ["Function", "Arn"] },
+                    "Id": { "Fn::Join": ["", ["Function", { "Ref": "Release" }]]}
+                }]
+            }
+        },
+        "EventsInvokePermissions": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName" : { "Ref" : "Function" },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "events.amazonaws.com",
+                "SourceArn": { "Fn::GetAtt": ["ScheduledRule", "Arn"] }
+            }
+        },
+        "SnsInvokePermissions": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName" : { "Ref" : "Function" },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "sns.amazonaws.com",
+                "SourceArn": { "Ref": "EventTopic" }
+            }
+        },
+        "EventSubscription": {
+            "Type" : "AWS::RDS::EventSubscription",
+            "Properties": {
+                "Enabled": true,
+                "SnsTopicArn": { "Ref": "EventTopic" },
+                "SourceType": "db-instance",
+                "EventCategories": [
+                    "availability",
+                    "failover",
+                    "failure",
+                    "low storage",
+                    "maintenance",
+                    "notification",
+                    "read replica",
+                    "recovery",
+                    "restoration"
+                ]
+            }
+        }
+    }
+}

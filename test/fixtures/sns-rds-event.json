@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:rds-events:e66a72ce-a955-4612-ad1f-d1a3068b0da7",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "de3d58ea-3185-5e3b-9530-3952c8c52a17",
+        "TopicArn": "arn:aws:sns:us-east-1:123455789012:rds-events",
+        "Subject": "RDS Notification Message",
+        "Message": "{\"Event Source\":\"db-instance\",\"Event Time\":\"2017-05-12 20:17:49.334\",\"Identifier Link\":\"https://console.aws.amazon.com/rds/home?region=us-east-1#dbinstance:id=test-db-instance\",\"Source ID\":\"test-db-instance\",\"Event ID\":\"http://docs.amazonwebservices.com/AmazonRDS/latest/UserGuide/USER_Events.html#RDS-EVENT-0002\",\"Event Message\":\"Finished DB Instance backup\"}",
+        "Timestamp": "2017-05-12T20:18:08.453Z",
+        "SignatureVersion": "1",
+        "Signature": "YK+XC8BB2JRq8EVZIB/XfBeDiSlSxBOP/rh3twj37uri34ABNCiAmHTIyztTsNN1IeVWEa+Ls0N3ubHTmXmuX0+TULSbidtz8Ltajd0EUWlnf5CN4uevJZ591xPpn5sCrz/vUUbyK9sFoBOUhp5nH5n5NoF2HQPRNgg8eNydNxzhvvW1pGZS9J+QjYgt5VMlojth4DZDusRsjdKyFiQKdV2unOToNG90ZS3WWVFNgn0pXg5VQoARf2/amQUC+FmC0qmf3sxtJhlHE7eVDLbExZMz/DFtzRpGiBGfp4ipfa2mzIeDsQnjRCxcN5jfN2PqmWuXaUVU9q9xyIiK1oB/uQ==",
+        "SigningCertUrl": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-b95095beb82e8f5a045b3aafc7f4149a.pem",
+        "UnsubscribeUrl": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:123456789012:rds-events:e66a72ce-a955-4612-ad1f-d1a3068b0da7",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}
