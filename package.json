@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "dependencies": {
-    "aws-sdk": "~2.63.0",
+    "aws-sdk": "~2.814.0",
     "@slack/client": "~3.10.0"
   },
   "devDependencies": {
